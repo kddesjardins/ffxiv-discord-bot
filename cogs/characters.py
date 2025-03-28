@@ -20,7 +20,7 @@ from interactions import (
     Modal,
     TextStyles,
 )
-
+from interactions.models.discord.components import TextInput 
 from services.xivapi import XIVAPI
 from utils.db import get_db_session
 from utils.logging import get_logger
