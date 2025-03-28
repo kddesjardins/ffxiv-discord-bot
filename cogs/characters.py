@@ -261,5 +261,10 @@ async def setup(client: Client) -> Extension:
     Returns:
         An instance of the Characters extension
     """
-    cog = CharactersCog(client)
-    return cog
+    class _CharactersCog(CharactersCog):
+        """
+        Subclass with a unique name to avoid extension conflicts
+        """
+        name = "FFXIVCharactersCog"
+    
+    return _CharactersCog(client)
