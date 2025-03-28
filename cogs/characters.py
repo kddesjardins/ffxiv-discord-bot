@@ -259,6 +259,6 @@ async def setup(client: Client) -> Extension:
         client: The Discord bot client
     
     Returns:
-        An instance of the CharactersCog extension
+        An instance of the Characters extension
     """
-    return CharactersCog(client)
+    return await client.add_extension(CharactersCog(client))
