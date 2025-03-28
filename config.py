@@ -16,14 +16,12 @@ class Config:
     """Bot configuration settings."""
     # Discord settings
     discord_token: str
+    database_url: str
+    redis_url: str
     test_guild_id: Optional[int] = None
     command_prefix: str = "!"
-    
-    # Database settings
-    database_url: str
-    
+
     # Redis settings
-    redis_url: str
     redis_password: Optional[str] = None
     redis_cache_ttl: int = 3600  # Cache TTL in seconds (1 hour default)
     
