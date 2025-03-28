@@ -11,24 +11,15 @@ from interactions import (
     SlashContext,
     slash_command,
     slash_option,
-    SlashCommandOption,
     OptionType,
     Embed,
-    EmbedField,
-    EmbedFooter,
-    ButtonStyle,
     Button,
+    ButtonStyle,
     ActionRow,
     ComponentContext,
     component_callback,
     Modal,
-    TextInput,
-    TextStyleType,
-    ModalContext,
-    listen,
-    Member,
-    Role,
-    Permissions
+    TextStyles,
 )
 import asyncpg
 
@@ -1268,5 +1259,19 @@ class GroupsCog(Extension):
 
 # Setup function to register the extension
 async def setup(client: Client) -> Extension:
-    """Set up the Groups extension."""
-    return GroupsCog(client)
+    """
+    Setup function for the Groups extension.
+    
+    Args:
+        client: The Discord bot client
+    
+    Returns:
+        An instance of the Groups extension
+    """
+    class _GroupsCog(GroupsCog):
+        """
+        Subclass with a unique name to avoid extension conflicts
+        """
+        name = "FFXIVGroupsCog"
+    
+    return _GroupsCog(client)
