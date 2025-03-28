@@ -21,4 +21,4 @@ python-dotenv>=1.0.0
 
 # Utilities
 pydantic>=2.0.0
-logging-colorlog>=6.0.0
+colorlog>=6.0.0
