@@ -6,6 +6,7 @@ from typing import Optional
 from contextlib import asynccontextmanager
 
 import asyncpg
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -31,7 +32,6 @@ async def init_db_connection():
         logger.info("Initializing database connection...")
         
         # Convert SQLAlchemy URL format to asyncpg format
-        # Replace postgresql:// with postgresql+asyncpg:// if needed
         db_url = config.database_url
         if db_url.startswith("postgresql://"):
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
@@ -52,10 +52,10 @@ async def init_db_connection():
             expire_on_commit=False
         )
         
-        # Verify connection
+        # Verify connection using SQLAlchemy core with text()
         async with _engine.begin() as conn:
-            # Ping the database
-            await conn.execute("SELECT 1")
+            # Use a text() query to check connection
+            await conn.execute(text("SELECT 1"))
             
         logger.info("Database connection established successfully")
         
@@ -122,7 +122,7 @@ async def perform_maintenance():
     try:
         async with _engine.begin() as conn:
             # Run VACUUM ANALYZE to update statistics and reclaim space
-            await conn.execute("VACUUM ANALYZE")
+            await conn.execute(text("VACUUM ANALYZE"))
         
         logger.info("Database maintenance completed")
         
