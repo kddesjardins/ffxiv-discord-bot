@@ -21,6 +21,7 @@ from interactions import (
     Modal,
     TextStyles,
 )
+from interactions.models.discord.components import TextInput
 import asyncpg
 
 from models.character import Character
