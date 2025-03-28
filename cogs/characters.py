@@ -5,8 +5,8 @@ import logging
 from typing import Optional, Dict, Any
 
 from interactions import (
-    Extension, 
-    Client, 
+    Extension,
+    Client,
     SlashContext,
     slash_command,
     slash_option,
@@ -18,10 +18,9 @@ from interactions import (
     ComponentContext,
     component_callback,
     Modal,
-    TextInput,
-    TextStyleType,
-    ModalContext
 )
+from interactions.models.discord import TextInput, TextStyleType
+from interactions.api.events import ModalContext
 
 from services.xivapi import XIVAPI
 from utils.db import get_db_session
