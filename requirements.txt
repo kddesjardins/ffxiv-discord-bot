@@ -1,0 +1,24 @@
+# Core bot framework
+discord-py-interactions>=4.4.0
+
+# Database
+asyncpg>=0.27.0
+sqlalchemy>=2.0.0
+sqlalchemy[asyncio]>=2.0.0
+alembic>=1.9.0
+
+# Caching
+redis>=4.5.0
+
+# HTTP
+aiohttp>=3.8.4
+
+# Scheduling
+apscheduler>=3.10.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Utilities
+pydantic>=2.0.0
+logging-colorlog>=6.0.0

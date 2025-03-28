@@ -1,0 +1,36 @@
+[Unit]
+Description=FFXIV Character Management Discord Bot
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=ffxiv-bot
+Group=ffxiv-bot
+WorkingDirectory=/opt/ffxiv-discord-bot
+Environment="PYTHONPATH=/opt/ffxiv-discord-bot"
+Environment="DISCORD_TOKEN="
+Environment="DATABASE_URL=postgresql://ffxiv_bot:password@localhost/ffxiv_bot"
+Environment="REDIS_URL=redis://localhost:6379/0"
+Environment="LOGGING_LEVEL=INFO"
+Environment="LOG_TO_FILE=true"
+Environment="LOG_FILE_PATH=/var/log/ffxiv-bot/bot.log"
+
+# Restart settings
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Execute the bot
+ExecStart=/usr/bin/python3 /opt/ffxiv-discord-bot/bot.py
+
+# Make sure log directory exists
+ExecStartPre=/bin/mkdir -p /var/log/ffxiv-bot
+
+# Set CPU and memory limits to ensure it doesn't interfere with Minecraft
+CPUQuota=30%
+MemoryLimit=512M
+
+[Install]
+WantedBy=multi-user.target
