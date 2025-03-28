@@ -1,11 +1,12 @@
 """
 Redis caching service for API responses.
 """
-import functools
 import json
 import logging
 import time
-from typing import Any, Optional, Dict, Union
+import functools
+import asyncio
+from typing import Any, Optional, Dict, Union, Callable
 
 import redis.asyncio as redis
 
@@ -181,44 +182,42 @@ async def cleanup_expired_cache() -> int:
         logger.error(f"Error during cache maintenance: {e}")
         return 0
 
-async def cached(key_prefix: str, ttl: Optional[int] = None):
+def cached(key_prefix: str, ttl: Optional[int] = None):
     """
-    Decorator for caching function results.
+    Decorator for caching async function results.
     
     Args:
         key_prefix: Prefix for cache key
         ttl: Time-to-live in seconds (or None for default)
-        
-    Example:
-        @cached("mounts")
-        async def get_mounts(character_id: int):
-            # Function implementation
     """
     def decorator(func):
+        # Create a dictionary to store the cached results
+        cache = {}
+        
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            # Generate cache key from function name, args, and kwargs
-            cache_key = f"{key_prefix}:{func.__name__}:"
-            
-            # Add args to cache key
-            if args:
+        def wrapper(*args, **kwargs):
+            # Prepare to call the async function
+            async def run_async():
+                # Generate cache key from function name, args, and kwargs
+                cache_key = f"{key_prefix}:{func.__name__}:"
                 cache_key += ":".join(str(arg) for arg in args)
+                cache_key += ":".join(f"{k}={v}" for k, v in sorted(kwargs.items()))
+                
+                # Try to get from cache first
+                cached_result = await cache_get(cache_key)
+                if cached_result is not None:
+                    return cached_result
+                
+                # Not in cache, call the function
+                result = await func(*args, **kwargs)
+                
+                # Cache the result
+                await cache_set(cache_key, result, ttl)
+                
+                return result
             
-            # Add kwargs to cache key
-            if kwargs:
-                cache_key += ":" + ":".join(f"{k}={v}" for k, v in sorted(kwargs.items()))
-            
-            # Try to get from cache first
-            cached_result = await cache_get(cache_key)
-            if cached_result is not None:
-                return cached_result
-            
-            # Not in cache, call the function
-            result = await func(*args, **kwargs)
-            
-            # Cache the result
-            await cache_set(cache_key, result, ttl)
-            
-            return result
+            # Run the async function and get the result
+            return asyncio.run(run_async())
+        
         return wrapper
     return decorator
