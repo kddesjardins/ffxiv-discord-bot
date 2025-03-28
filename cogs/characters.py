@@ -20,7 +20,6 @@ from interactions import (
     Modal,
     TextStyles,
 )
-from interactions.api.events import ModalContext
 
 from services.xivapi import XIVAPI
 from utils.db import get_db_session
