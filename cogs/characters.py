@@ -261,4 +261,5 @@ async def setup(client: Client) -> Extension:
     Returns:
         An instance of the Characters extension
     """
-    return await client.add_extension(CharactersCog(client))
+    cog = CharactersCog(client)
+    return cog
