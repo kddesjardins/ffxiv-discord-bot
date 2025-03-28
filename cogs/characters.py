@@ -18,9 +18,11 @@ from interactions import (
     ComponentContext,
     component_callback,
     Modal,
+    TextStyleType,
+    ShortText,
+    ParagraphText,
 )
-from interactions.models.discord import TextInput, TextStyleType
-from interactions.api.events import ModalContext
+from interactions.models.discord import ModalContext
 
 from services.xivapi import XIVAPI
 from utils.db import get_db_session
