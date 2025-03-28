@@ -2,6 +2,7 @@
 Service for interacting with the XIVAPI.
 Documentation: https://xivapi.com/docs
 """
+import time
 import logging
 import aiohttp
 from typing import Dict, List, Any, Optional, Union

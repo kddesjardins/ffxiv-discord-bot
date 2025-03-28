@@ -1,6 +1,7 @@
 """
 Redis caching service for API responses.
 """
+import functools
 import json
 import logging
 import time
@@ -194,6 +195,7 @@ async def cached(key_prefix: str, ttl: Optional[int] = None):
             # Function implementation
     """
     def decorator(func):
+        @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Generate cache key from function name, args, and kwargs
             cache_key = f"{key_prefix}:{func.__name__}:"
