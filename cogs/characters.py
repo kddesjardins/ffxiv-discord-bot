@@ -18,7 +18,7 @@ from interactions import (
     ComponentContext,
     component_callback,
     Modal,
-    TextStyleType,
+    TextStyles,
     ShortText,
     ParagraphText,
 )
