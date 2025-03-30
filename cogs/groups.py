@@ -1058,10 +1058,8 @@ class GroupsCog(Extension):
                 )
             ]
         )
-
-await ctx.popup(modal)
         
-        await ctx.popup(modal)
+    await ctx.popup(modal)
     
     @listen("modal_submit")
     async def on_modal_submit(self, ctx: ModalContext):
