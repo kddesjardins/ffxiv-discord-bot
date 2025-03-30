@@ -1,8 +1,6 @@
 """
 Group management commands for the FFXIV Discord bot.
 """
-import logging
-from typing import Dict, Any, List, Optional
 import uuid
 
 from interactions import (
@@ -19,13 +17,8 @@ from interactions import (
     ComponentContext,
     component_callback,
     Modal,
-    TextStyles,
 )
-from interactions.models.discord.components import TextInput
-import asyncpg
 
-from models.character import Character
-from models.group import Group
 from services.xivapi import XIVAPI
 from services.recommendation import RecommendationEngine
 from services.ffxivcollect import FFXIVCollectAPI
@@ -1039,8 +1032,7 @@ class GroupsCog(Extension):
             title="Create New Group",
             custom_id="create_group_modal",
             components=[
-                TextInput(
-                    style=TextStyleType.SHORT,
+                ShortText(
                     label="Group Name",
                     custom_id="group_name",
                     placeholder="Enter a name for your group",
@@ -1048,8 +1040,7 @@ class GroupsCog(Extension):
                     max_length=100,
                     required=True
                 ),
-                TextInput(
-                    style=TextStyleType.PARAGRAPH,
+                ParagraphText(
                     label="Description",
                     custom_id="group_description",
                     placeholder="Enter a description for your group (optional)",
@@ -1057,8 +1048,7 @@ class GroupsCog(Extension):
                     max_length=500,
                     required=False
                 ),
-                TextInput(
-                    style=TextStyleType.SHORT,
+                ShortText(
                     label="Color (hex code)",
                     custom_id="group_color",
                     placeholder="#3498db (optional)",
@@ -1068,6 +1058,8 @@ class GroupsCog(Extension):
                 )
             ]
         )
+
+await ctx.popup(modal)
         
         await ctx.popup(modal)
     

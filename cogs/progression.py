@@ -22,11 +22,11 @@ from interactions import (
     ComponentContext,
     component_callback,
     Modal,
-    TextInput,
     TextStyleType,
     ModalContext,
     listen,
     Member,
+    ShortText,
     Role
 )
 import asyncpg
@@ -674,8 +674,7 @@ class ProgressionCog(Extension):
             title="Update MSQ Progress",
             custom_id=f"msq_progress_modal:{char_id}:{expansion}",
             components=[
-                TextInput(
-                    style=TextStyleType.SHORT,
+                ShortText(
                     label="Current Expansion",
                     custom_id="expansion",
                     placeholder="Enter expansion (arr, hw, sb, shb, ew, dt)",
@@ -684,8 +683,7 @@ class ProgressionCog(Extension):
                     required=True,
                     default=expansion
                 ),
-                TextInput(
-                    style=TextStyleType.SHORT,
+                ShortText(
                     label="Progress",
                     custom_id="progress",
                     placeholder="started, 25pct, 50pct, 75pct, complete, patches",
