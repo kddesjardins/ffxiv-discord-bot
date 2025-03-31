@@ -5,7 +5,7 @@ Main entry point for bot initialization and execution.
 """
 import os
 import logging
-import importlib.util
+import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -14,17 +14,9 @@ from interactions import (
     Intents, 
     listen,
     slash_command,
-    slash_option,
     SlashContext,
-    OptionType,
-    Embed,
-    ButtonStyle,
-    Button,
-    ActionRow
+    Embed
 )
-
-# Import our database module
-import database as db
 
 # Load environment variables from .env file if present
 load_dotenv()
@@ -68,11 +60,27 @@ async def ping(ctx: SlashContext):
 
 async def load_extensions():
     """Load all extensions from the cogs directory."""
+    # Create the cogs directory if it doesn't exist
     cogs_dir = Path("cogs")
-    
-    # Create the directory if it doesn't exist
     cogs_dir.mkdir(exist_ok=True)
     
+    # First, check if character_lookup.py exists in the current directory
+    lookup_file = Path("character_lookup.py")
+    if lookup_file.exists():
+        # Create a simple cog file in the cogs directory
+        with open(cogs_dir / "lookup_cog.py", "w") as f:
+            f.write('''"""
+Character lookup cog for the FFXIV Discord bot.
+"""
+from interactions import Extension, Client
+from character_lookup import CharacterLookupCog
+
+async def setup(client: Client) -> Extension:
+    """Set up the character lookup extension."""
+    return CharacterLookupCog(client)
+''')
+    
+    # Then load all extensions from the cogs directory
     for filepath in cogs_dir.glob("*.py"):
         filename = filepath.name
         
@@ -95,18 +103,19 @@ if __name__ == "__main__":
         logger.error("DISCORD_TOKEN environment variable not set")
         exit(1)
     
-    # Initialize the database
-    try:
-        db.initialize_db()
-        logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Error initializing database: {e}")
-        exit(1)
-    
     logger.info("Starting FFXIV Character Management Bot")
     
+    # Create .env file with empty XIVAPI_KEY if it doesn't exist
+    if not os.path.exists(".env"):
+        with open(".env", "a") as f:
+            f.write("\nXIVAPI_KEY=")
+        logger.info("Created .env file with empty XIVAPI_KEY")
+    elif "XIVAPI_KEY" not in os.environ:
+        with open(".env", "a") as f:
+            f.write("\nXIVAPI_KEY=")
+        logger.info("Added empty XIVAPI_KEY to .env file")
+    
     # Load extensions
-    import asyncio
     asyncio.run(load_extensions())
     
     bot.start()
