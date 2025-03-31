@@ -1,46 +1,46 @@
 #!/usr/bin/env python3
 """
-FFXIV Character Management Discord Bot
+FFXIV Character Management Discord Bot - Simplified Version
 Main entry point for bot initialization and execution.
 """
 import os
-import sys
 import logging
-import signal
-import asyncio
-import importlib.util
-from pathlib import Path
+from dotenv import load_dotenv
 
 from interactions import (
     Client, 
     Intents, 
     listen,
-    Task,
-    IntervalTrigger
+    slash_command,
+    slash_option,
+    SlashContext,
+    OptionType,
+    Embed,
+    ButtonStyle,
+    Button,
+    ActionRow
 )
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from utils.logging import setup_logging
-from utils.db import init_db_connection, close_db_connection
-from services.api_cache import init_redis, close_redis
-from config import load_config
-
-# Load configuration
-config = load_config()
+# Load environment variables from .env file if present
+load_dotenv()
 
 # Setup logging
-logger = setup_logging(config.logging_level)
-
-# Initialize the bot with all intents
-bot = Client(
-    token=config.discord_token,
-    intents=Intents.ALL,
-    test_guilds=[config.test_guild_id] if config.test_guild_id else None,
-    debug_scope=config.test_guild_id if config.test_guild_id else None
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("bot.log", encoding="utf-8")
+    ]
 )
+logger = logging.getLogger("ffxiv_bot")
 
-# Initialize scheduler
-scheduler = AsyncIOScheduler()
+# Initialize the bot with necessary intents
+bot = Client(
+    token=os.getenv("DISCORD_TOKEN"),
+    intents=Intents.DEFAULT,
+    test_guilds=[int(os.getenv("TEST_GUILD_ID"))] if os.getenv("TEST_GUILD_ID") else None
+)
 
 @listen()
 async def on_ready():
@@ -52,159 +52,191 @@ async def on_ready():
         logger.info(f"Registered commands: {[cmd.name for cmd in commands]}")
     except Exception as e:
         logger.error(f"Error fetching commands: {e}")
-    
-    # Initialize database connection
-    await init_db_connection()
-    
-    # Initialize Redis connection
-    await init_redis()
-    
-    # Start scheduled tasks
-    scheduler.start()
-    
-    # Schedule API cache cleanup
-    @Task.create(IntervalTrigger(hours=1))
-    async def cleanup_cache():
-        """Clean up expired cache entries hourly"""
-        from services.api_cache import cleanup_expired_cache
-        await cleanup_expired_cache()
-    
-    # Schedule database checks
-    @Task.create(IntervalTrigger(hours=24))
-    async def db_maintenance():
-        """Perform database maintenance daily"""
-        from utils.db import perform_maintenance
-        await perform_maintenance()
 
-async def load_single_extension(extension_name: str, is_priority: bool = False):
-    """Load a single extension by name."""
+@slash_command(
+    name="ping",
+    description="Check if the bot is responsive",
+)
+async def ping(ctx: SlashContext):
+    """Simple ping command to check if the bot is responsive."""
+    await ctx.send("Pong! Bot is up and running!")
+
+@slash_command(
+    name="character",
+    description="Character management commands",
+)
+async def character_command(ctx: SlashContext):
+    """Character management command group."""
+    # This is a command group and doesn't need its own implementation
+    pass
+
+@character_command.subcommand(
+    sub_cmd_name="register",
+    sub_cmd_description="Register a new character",
+)
+@slash_option(
+    name="name",
+    description="Character name",
+    required=True,
+    opt_type=OptionType.STRING
+)
+@slash_option(
+    name="server",
+    description="Character server",
+    required=True,
+    opt_type=OptionType.STRING
+)
+async def character_register(ctx: SlashContext, name: str, server: str):
+    """Register a new character."""
+    # Defer response while we process
+    await ctx.defer()
+    
     try:
-        # Extract just the module name from the full path
-        module_name = extension_name.split('.')[-1]
+        # In a full implementation, you would save this to a database
+        # For now, just acknowledge the registration
         
-        # Build the path to the module file
-        module_path = Path(__file__).parent / f"{extension_name.replace('.', '/')}.py"
-        
-        # Get the module spec
-        spec = importlib.util.spec_from_file_location(
-            extension_name,  # Use full extension name
-            str(module_path)
+        embed = Embed(
+            title="Character Registered",
+            description=f"Successfully registered {name} on {server}",
+            color=0x3498db
         )
         
-        if not spec or not spec.loader:
-            raise ImportError(f"Could not find module spec for {extension_name}")
-
-        # Create the module and set its name
-        module = importlib.util.module_from_spec(spec)
-        module.__name__ = extension_name
-        sys.modules[extension_name] = module
+        embed.add_field(name="Character Name", value=name, inline=True)
+        embed.add_field(name="Server", value=server, inline=True)
+        embed.add_field(name="Owner", value=ctx.author.mention, inline=True)
         
-        # Execute the module
-        spec.loader.exec_module(module)
+        # Add a button for future verification step
+        components = ActionRow(
+            Button(
+                style=ButtonStyle.PRIMARY,
+                label="Verify Character",
+                custom_id=f"verify_character:{name}:{server}"
+            )
+        )
         
-        # Call setup function and register extension
-        extension = await module.setup(bot)
-        if not extension:
-            raise ValueError(f"Setup function for {extension_name} returned None")
-            
-        msg = "priority extension" if is_priority else "extension"
-        logger.info(f"Loaded {msg}: {extension_name}")
+        await ctx.send(embed=embed, components=components)
         
     except Exception as e:
-        logger.error(f"Failed to load {'priority ' if is_priority else ''}extension {extension_name}: {e}")
-        logger.error("Stack trace:", exc_info=True)
-        if is_priority:
-            raise e
+        logger.error(f"Error registering character: {e}")
+        await ctx.send("An error occurred while registering your character. Please try again later.")
+
+@character_command.subcommand(
+    sub_cmd_name="list",
+    sub_cmd_description="List your registered characters",
+)
+async def character_list(ctx: SlashContext):
+    """List registered characters."""
+    # Defer response while we process
+    await ctx.defer()
+    
+    try:
+        # In a full implementation, you would fetch this from a database
+        # For now, just show a placeholder
         
-async def load_extensions():
-    """Load all extensions with priority ordering."""
-    # Priority extensions that must be loaded first
-    priority_extensions = [
-        "cogs.managers",    # Load managers first (permissions)
-        "cogs.characters",  # Character management
-        "cogs.groups",      # Group management
+        embed = Embed(
+            title="Your FFXIV Characters",
+            description="In the full implementation, this would list your registered characters from the database.",
+            color=0x3498db
+        )
+        
+        await ctx.send(embed=embed)
+        
+    except Exception as e:
+        logger.error(f"Error listing characters: {e}")
+        await ctx.send("An error occurred while listing your characters. Please try again later.")
+
+@slash_command(
+    name="msq",
+    description="MSQ progression commands",
+)
+async def msq_command(ctx: SlashContext):
+    """MSQ progression command group."""
+    # This is a command group and doesn't need its own implementation
+    pass
+
+@msq_command.subcommand(
+    sub_cmd_name="update",
+    sub_cmd_description="Update MSQ progression for your character",
+)
+@slash_option(
+    name="expansion",
+    description="Current expansion",
+    required=True,
+    opt_type=OptionType.STRING,
+    choices=[
+        {"name": "A Realm Reborn", "value": "arr"},
+        {"name": "Heavensward", "value": "hw"},
+        {"name": "Stormblood", "value": "sb"},
+        {"name": "Shadowbringers", "value": "shb"},
+        {"name": "Endwalker", "value": "ew"},
+        {"name": "Dawntrail", "value": "dt"}
     ]
-
-    # Load priority extensions first
-    for extension in priority_extensions:
-        await load_single_extension(extension, is_priority=True)
-
-    # Load remaining extensions
-    cogs_dir = Path(__file__).parent / 'cogs'
-    excluded_files = ['__init__.py', '__pycache__']  # Files to exclude
-    
-    for filepath in cogs_dir.glob('*.py'):
-        filename = filepath.name
-        if filename not in excluded_files:
-            extension_name = f'cogs.{filename[:-3]}'
-            if extension_name not in priority_extensions:
-                await load_single_extension(extension_name)
-
-async def shutdown(signal, loop):
-    """Cleanup tasks tied to the service's shutdown."""
-    logger.info(f"Received exit signal {signal.name}...")
+)
+@slash_option(
+    name="progress",
+    description="Progress within expansion",
+    required=True,
+    opt_type=OptionType.STRING,
+    choices=[
+        {"name": "Just Started", "value": "started"},
+        {"name": "About 25% Complete", "value": "25pct"},
+        {"name": "About 50% Complete", "value": "50pct"},
+        {"name": "About 75% Complete", "value": "75pct"},
+        {"name": "Main Story Complete", "value": "complete"},
+        {"name": "Post-MSQ Patches Complete", "value": "patches"}
+    ]
+)
+async def msq_update(ctx: SlashContext, expansion: str, progress: str):
+    """Update MSQ progression for a character."""
+    # Defer response while we process
+    await ctx.defer()
     
     try:
-        # Stop the scheduler
-        if scheduler.running:
-            scheduler.shutdown(wait=False)
+        # Map expansion shorthand to full name
+        expansion_map = {
+            "arr": "A Realm Reborn",
+            "hw": "Heavensward",
+            "sb": "Stormblood",
+            "shb": "Shadowbringers",
+            "ew": "Endwalker",
+            "dt": "Dawntrail"
+        }
         
-        # Close Redis connection
-        await close_redis()
+        # Map progress to display text
+        progress_map = {
+            "started": "Just Started",
+            "25pct": "About 25% Complete",
+            "50pct": "About 50% Complete",
+            "75pct": "About 75% Complete",
+            "complete": "Main Story Complete",
+            "patches": "Post-MSQ Patches Complete"
+        }
         
-        # Close database connection
-        await close_db_connection()
+        expansion_name = expansion_map.get(expansion, expansion)
+        progress_name = progress_map.get(progress, progress)
         
-        # Stop the bot
-        if hasattr(bot, '_ready') and bot._ready.is_set():
-            await bot.stop()
+        # In a full implementation, you would save this to a database
+        # For now, just acknowledge the update
         
-        # Cancel all tasks
-        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-        logger.info(f"Cancelling {len(tasks)} outstanding tasks")
-        for task in tasks:
-            task.cancel()
+        embed = Embed(
+            title="MSQ Progress Updated",
+            description=f"Successfully updated MSQ progress",
+            color=0x3498db
+        )
         
-        await asyncio.gather(*tasks, return_exceptions=True)
+        embed.add_field(name="Expansion", value=expansion_name, inline=True)
+        embed.add_field(name="Progress", value=progress_name, inline=True)
         
-        # Stop the event loop
-        loop.stop()
+        await ctx.send(embed=embed)
         
     except Exception as e:
-        logger.error(f"Error during shutdown: {e}")
-
-async def main():
-    """Main entry point for the bot."""
-    try:
-        logger.info("Starting FFXIV Character Management Bot")
-        await load_extensions()
-        await bot.astart()
-    except asyncio.CancelledError:
-        logger.info("Bot startup cancelled")
-    except Exception as e:
-        logger.error(f"Error starting bot: {e}")
-        raise
+        logger.error(f"Error updating MSQ progress: {e}")
+        await ctx.send("An error occurred while updating MSQ progress. Please try again later.")
 
 if __name__ == "__main__":
-    if not config.discord_token:
+    if not os.getenv("DISCORD_TOKEN"):
         logger.error("DISCORD_TOKEN environment variable not set")
-        sys.exit(1)
+        exit(1)
     
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    # Handle signals
-    signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
-    for s in signals:
-        loop.add_signal_handler(
-            s, lambda s=s: asyncio.create_task(shutdown(s, loop))
-        )
-    
-    try:
-        loop.run_until_complete(main())
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt")
-    finally:
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
-        logger.info("Successfully shutdown the bot.")
+    logger.info("Starting FFXIV Character Management Bot")
+    bot.start()
